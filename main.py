@@ -9,9 +9,13 @@ import requests
 class BaseHandler(RequestHandler):
     def set_default_headers(self):
         print('set headers')
-        self.set_header("Access-Control-Allow-Origin", "*")
-        self.set_header("Access-Control-Allow-Headers", "x-requested-with")
+        self.set_header('Access-Control-Allow-Origin', '*')
+        self.set_header('Access-Control-Allow-Headers', '*')
+        self.set_header('Access-Control-Max-Age', 1000)
+        self.set_header('Content-type', 'application/json')
         self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+        self.set_header('Access-Control-Allow-Headers',
+                        'Content-Type, Access-Control-Allow-Origin, Access-Control-Allow-Headers, X-Requested-By, Access-Control-Allow-Methods')
 
     @property
     def token(self):
@@ -45,6 +49,9 @@ class BaseHandler(RequestHandler):
             'message': 'I\'m alive!',
         })
 
+    def options(self):
+        self.finish('I\'m ok')
+
 
 class OpenUrlCommandHandler(BaseHandler):
     async def post(self):
@@ -66,6 +73,44 @@ class MapsHandler(BaseHandler):
         await self.finish({'data': data})
 
 
+class UserHandler(BaseHandler):
+    async def get(self):
+        URL = "https://app.redforester.com/api/maps/" + self.map_id + "/users"
+        auth = ("extension", self.token)
+        headers = {
+            'Content-Type': "application/json"
+        }
+        r = requests.get(url=URL, auth=auth, headers=headers)
+        data = r.json()
+        await self.finish({'data': data})
+
+
+class CurrentUserHandler(BaseHandler):
+    async def get(self):
+        URL = "https://app.redforester.com/api/user"
+        auth = ("extension", self.token)
+        headers = {
+            'Content-Type': "application/json"
+        }
+        r = requests.get(url=URL, auth=auth, headers=headers)
+        data = r.json()
+        await self.finish({'data': data})
+
+
+class NewNodeHandler(BaseHandler):
+    async def post(self):
+        URL = "https://app.redforester.com/api/nodes"
+        auth = ("extension", self.token)
+        headers = {
+            'Content-Type': "application/json"
+        }
+        data = self.request.body
+        print(data)
+        r = requests.post(url=URL, auth=auth, headers=headers, data=data)
+        print(r.json())
+        await self.finish({})
+
+
 if __name__ == '__main__':
     logging.basicConfig(
         level=logging.DEBUG
@@ -76,9 +121,12 @@ if __name__ == '__main__':
         (r'/', BaseHandler),
         (r'/api/is-alive', BaseHandler),
         (r'/api/get-maps', MapsHandler),
+        (r'/api/get-users', UserHandler),
+        (r'/api/get-current-user', CurrentUserHandler),
+        (r'/api/new-node', NewNodeHandler),
         # CMDs
         (r'/api/commands/url', OpenUrlCommandHandler)
     ])
 
-    app.listen(8080, "0.0.0.0")
+    app.listen(8000, "0.0.0.0")
     IOLoop.current().start()
